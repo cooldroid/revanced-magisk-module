@@ -12,9 +12,9 @@ NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
 WGET_HEADER="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0"
 
 SERVICE_SH=$(cat $MODULE_SCRIPTS_DIR/service.sh)
-POSTFSDATA_SH=$(cat $MODULE_SCRIPTS_DIR/post-fs-data.sh)
+#POSTFSDATA_SH=$(cat $MODULE_SCRIPTS_DIR/post-fs-data.sh)
 CUSTOMIZE_SH=$(cat $MODULE_SCRIPTS_DIR/customize.sh)
-UNINSTALL_SH=$(cat $MODULE_SCRIPTS_DIR/uninstall.sh)
+#UNINSTALL_SH=$(cat $MODULE_SCRIPTS_DIR/uninstall.sh)
 
 json_get() {
 	grep -o "\"${1}\":[^\"]*\"[^\"]*\"" | sed -E 's/".*".*"(.*)"/\1/' | if [ $# -eq 2 ]; then grep "$2"; else cat; fi || echo ""
@@ -26,13 +26,13 @@ get_prebuilts() {
 	RV_CLI_JAR="${TEMP_DIR}/${RV_CLI_URL##*/}"
 	log "CLI: ${RV_CLI_URL##*/}"
 
-	RV_INTEGRATIONS_URL=$(req https://api.github.com/repos/revanced/revanced-integrations/releases/latest - | json_get 'browser_download_url')
+	RV_INTEGRATIONS_URL=$(req https://api.github.com/repos/inotia00/revanced-integrations/releases/latest - | json_get 'browser_download_url')
 	RV_INTEGRATIONS_APK=${RV_INTEGRATIONS_URL##*/}
 	RV_INTEGRATIONS_APK="${RV_INTEGRATIONS_APK%.apk}-$(cut -d/ -f8 <<<"$RV_INTEGRATIONS_URL").apk"
 	log "Integrations: $RV_INTEGRATIONS_APK"
 	RV_INTEGRATIONS_APK="${TEMP_DIR}/${RV_INTEGRATIONS_APK}"
 
-	RV_PATCHES=$(req https://api.github.com/repos/revanced/revanced-patches/releases/latest -)
+	RV_PATCHES=$(req https://api.github.com/repos/inotia00/revanced-patches/releases/latest -)
 	RV_PATCHES_CHANGELOG=$(echo "$RV_PATCHES" | json_get 'body' | sed 's/\(\\n\)\+/\\n/g')
 	RV_PATCHES_URL=$(echo "$RV_PATCHES" | json_get 'browser_download_url' 'jar')
 	RV_PATCHES_JAR="${TEMP_DIR}/${RV_PATCHES_URL##*/}"
@@ -66,9 +66,9 @@ set_prebuilts() {
 
 reset_template() {
 	echo "# utils" >"${MODULE_TEMPLATE_DIR}/service.sh"
-	echo "# utils" >"${MODULE_TEMPLATE_DIR}/post-fs-data.sh"
+	#echo "# utils" >"${MODULE_TEMPLATE_DIR}/post-fs-data.sh"
 	echo "# utils" >"${MODULE_TEMPLATE_DIR}/customize.sh"
-	echo "# utils" >"${MODULE_TEMPLATE_DIR}/uninstall.sh"
+	#echo "# utils" >"${MODULE_TEMPLATE_DIR}/uninstall.sh"
 	echo "# utils" >"${MODULE_TEMPLATE_DIR}/module.prop"
 	rm -rf ${MODULE_TEMPLATE_DIR}/*.apk
 	mkdir -p ${MODULE_TEMPLATE_DIR}/bin/arm ${MODULE_TEMPLATE_DIR}/bin/arm64
@@ -129,7 +129,7 @@ patch_apk() {
 
 zip_module() {
 	local patched_apk=$1 module_name=$2 stock_apk=$3 pkg_name=$4 template_dir=$5
-	cp -f "$patched_apk" "${template_dir}/base.apk"
+	cp -f "$patched_apk" "${template_dir}/revanced.apk"
 	cp -f "$stock_apk" "${template_dir}/${pkg_name}.apk"
 	cd "$template_dir" || abort "Module template dir not found"
 	zip -"$COMPRESSION_LEVEL" -FSr "../../${BUILD_DIR}/${module_name}" .
@@ -241,9 +241,9 @@ build_rv() {
 		declare -r base_template=$(mktemp -d -p $TEMP_DIR)
 		cp -a $MODULE_TEMPLATE_DIR/. "$base_template"
 
-		uninstall_sh "${args[pkg_name]}" "$base_template"
+		#uninstall_sh "${args[pkg_name]}" "$base_template"
 		service_sh "${args[pkg_name]}" "$base_template"
-		postfsdata_sh "${args[pkg_name]}" "$base_template"
+		#postfsdata_sh "${args[pkg_name]}" "$base_template"
 		customize_sh "${args[pkg_name]}" "$base_template"
 
 		local upj pn
@@ -256,6 +256,7 @@ build_rv() {
 		module_prop "$pn" \
 			"${args[app_name]} ReVanced" \
 			"$version" \
+			"$(aapt dump badging $stock_apk | grep versionCode | sed -e "s/.*versionCode='//" -e "s/' .*//")" \
 			"${args[app_name]} ReVanced Magisk module" \
 			"https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/update/${upj}" \
 			"$base_template"
@@ -409,9 +410,9 @@ module_prop() {
 	echo "id=${1}
 name=${2}
 version=v${3}
-versionCode=${NEXT_VER_CODE}
+versionCode=${4}
 author=j-hc
-description=${4}" >"${6}/module.prop"
+description=${5}" >"${7}/module.prop"
 
-	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
+	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${6}" >>"${7}/module.prop"; fi
 }

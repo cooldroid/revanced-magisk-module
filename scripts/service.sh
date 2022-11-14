@@ -1,13 +1,30 @@
-#!/system/bin/sh
-# shellcheck disable=SC2086
-MODDIR=${0%/*}
-RVPATH=$(magisk --path)/.magisk/mirror${MODDIR}/base.apk
-until [ "$(getprop sys.boot_completed)" = 1 ]; do sleep 1; done
-sleep __MNTDLY
 
-BASEPATH=$(pm path __PKGNAME | grep base)
-BASEPATH=${BASEPATH#*:}
-if [ "$BASEPATH" ] && [ -d ${BASEPATH%base.apk}/lib ]; then
-	chcon u:object_r:apk_data_file:s0 $RVPATH
-	su -Mc mount -o bind $RVPATH $BASEPATH
+MODDIR="${0%/*}"
+
+while [ "$(getprop sys.boot_completed)" != 1 ]; do
+    sleep 1
+done
+
+rm -rf "$MODDIR/base.apk"
+
+PKGNAME=__PKGNAME
+
+STOCKAPPVER=$(dumpsys package $PKGNAME | grep versionName | cut -d= -f 2 | sed -n '1p')
+RVAPPVER=$(grep version= "$MODDIR/module.prop" | sed 's/version=v//')
+
+if [ "$STOCKAPPVER" != "$RVAPPVER" ]
+then
+	exit
 fi
+
+
+YOUTUBE_APK="$(pm path __PKGNAME | head -1 | sed "s/^package://")"
+if [ -z "$YOUTUBE_APK" ]; then
+    exit
+fi
+ln -fs "$YOUTUBE_APK" "$MODDIR/base.apk"
+
+magisk --clone-attr "$MODDIR/base.apk" "$MODDIR/revanced.apk"
+
+# launch daemon
+"$MODDIR/youtubervx"

@@ -15,13 +15,6 @@ basepath() {
 	echo ${basepath#*:}
 }
 
-grep __PKGNAME- /proc/self/mountinfo | while read -r line; do
-	ui_print "* Un-mount"
-	mountpoint=$(echo "$line" | cut -d' ' -f5)
-	umount -l "${mountpoint%%\\*}"
-done
-am force-stop __PKGNAME
-
 BASEPATH=$(basepath)
 if [ -n "$BASEPATH" ] && cmpr $BASEPATH $MODPATH/__PKGNAME.apk; then
 	ui_print "* Installed __PKGNAME and module APKs are identical"
@@ -39,17 +32,16 @@ else
 	fi
 fi
 ui_print "* Setting Permissions"
-set_perm $MODPATH/base.apk 1000 1000 644 u:object_r:apk_data_file:s0
+set_perm $MODPATH/revanced.apk 1000 1000 644 u:object_r:apk_data_file:s0
 
-ui_print "* Mounting __PKGNAME"
-RVPATH=$(magisk --path)/.magisk/mirror$MODPATH/base.apk
-
-if ! op=$(su -Mc mount -o bind $RVPATH $BASEPATH 2>&1); then
-	ui_print "ERROR: Mount failed!"
-	abort "$op"
-fi
+ui_print "* Extracting youtubervx daemon"
+api_level_arch_detect
+[ ! -d "$MODPATH/libs/$ABI" ] && abort "! $ABI not supported"
+cp -af "$MODPATH/libs/$ABI/youtubervx" "$MODPATH/youtubervx"
+rm -rf "$MODPATH/libs"
+chcon -R u:object_r:system_file:s0 "$MODPATH/youtubervx"
+chmod -R 755 "$MODPATH/youtubervx"
 rm -r $MODPATH/bin $MODPATH/__PKGNAME.apk
-am force-stop __PKGNAME
 
 ui_print "* Optimizing __PKGNAME"
 cmd package compile --reset __PKGNAME &
