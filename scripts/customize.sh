@@ -1,6 +1,18 @@
 # shellcheck disable=SC2148,SC2086,SC2115
 ui_print ""
 
+if [ "$BOOTMODE" != "true" ]; then
+    abort "! Recovery install is not supported"
+fi
+
+MAGISKTMP="$(magisk --path)" || MAGISKTMP=/sbin
+
+if [ ! -d "$MAGISKTMP/.magisk/modules/magisk_proc_monitor" ]; then
+    ui_print "! Please install Magisk Process monitor tool v1.1+"
+    ui_print "  https://github.com/HuskyDG/magisk_proc_monitor"
+    abort
+fi
+
 if [ $ARCH = "arm" ]; then
 	#arm
 	ARCH_LIB=armeabi-v7a
@@ -13,14 +25,6 @@ else
 	abort "ERROR: unsupported arch: ${ARCH}"
 fi
 set_perm_recursive $MODPATH/bin 0 0 0755 0777
-
-su -Mc grep __PKGNAME /proc/mounts | while read -r line; do
-	ui_print "* Un-mount"
-	mp=${line#* }
-	mp=${mp%% *}
-	su -Mc umount -l ${mp%%\\*}
-done
-am force-stop __PKGNAME
 
 BASEPATH=$(pm path __PKGNAME | grep base)
 BASEPATH=${BASEPATH#*:}
@@ -58,25 +62,16 @@ if [ -z "$(ls -A1 ${BASEPATHLIB})" ]; then
 	set_perm_recursive ${BASEPATHLIB} 1000 1000 755 755 u:object_r:apk_data_file:s0
 fi
 ui_print "* Setting Permissions"
-set_perm $MODPATH/base.apk 1000 1000 644 u:object_r:apk_data_file:s0
+set_perm $MODPATH/revanced.apk 1000 1000 644 u:object_r:apk_data_file:s0
 
-ui_print "* Mounting __PKGNAME"
-mkdir $NVBASE/rvhc 2>/dev/null
-RVPATH=$NVBASE/rvhc/__PKGNAME_rv.apk
-mv -f $MODPATH/base.apk $RVPATH
-
-if ! op=$(su -Mc mount -o bind $RVPATH $BASEPATH 2>&1); then
-	ui_print "ERROR: Mount failed!"
-	ui_print "$op"
-	abort "Flash in official Magisk app"
-fi
+ui_print "* Updating live version"
 am force-stop __PKGNAME
-ui_print "* Optimizing __PKGNAME"
-cmd package compile --reset __PKGNAME &
+cat $MODPATH/dynmount.sh > $MAGISKTMP/.magisk/modules/__MODULE_ID/dynmount.sh
+cat $MODPATH/revanced.apk > $MAGISKTMP/.magisk/modules/__MODULE_ID/revanced.apk
 
 ui_print "* Cleanup"
 rm -rf $MODPATH/bin $MODPATH/__PKGNAME.apk
 
 ui_print "* Done"
-ui_print "  by j-hc (github.com/j-hc)"
+ui_print "  by CoolDroid (github.com/cooldroid)"
 ui_print " "

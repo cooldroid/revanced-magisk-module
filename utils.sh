@@ -12,6 +12,7 @@ REBUILD=false
 OS=$(uname -o)
 
 SERVICE_SH=$(cat $MODULE_SCRIPTS_DIR/service.sh)
+DYNMOUNT_SH=$(cat $MODULE_SCRIPTS_DIR/dynmount.sh)
 CUSTOMIZE_SH=$(cat $MODULE_SCRIPTS_DIR/customize.sh)
 UNINSTALL_SH=$(cat $MODULE_SCRIPTS_DIR/uninstall.sh)
 
@@ -238,10 +239,11 @@ patch_apk() {
 zip_module() {
 	pr "Packing module ($app_name)"
 	local patched_apk=$1 module_name=$2 stock_apk=$3 pkg_name=$4 template_dir=$5
-	cp -f "$patched_apk" "${template_dir}/base.apk"
-	cp -f "$stock_apk" "${template_dir}/${pkg_name}.apk"
+	cp -fp "$patched_apk" "${template_dir}/revanced.apk"
+	cp -fp "$stock_apk" "${template_dir}/${pkg_name}.apk"
 	pushd >/dev/null "$template_dir" || abort "Module template dir not found"
-	zip -"$COMPRESSION_LEVEL" -FSqr "../../${BUILD_DIR}/${module_name}" .
+	#zip -"$COMPRESSION_LEVEL" -FSqr "../../${BUILD_DIR}/${module_name}" .
+	7zz u -tzip "../../${BUILD_DIR}/${module_name}" . -x!".DS_Store"
 	popd >/dev/null || :
 }
 
@@ -411,14 +413,17 @@ build_rv() {
 			stock_apk_module=$stock_apk
 		fi
 
-		uninstall_sh "$pkg_name" "$isbndl" "$base_template"
-		service_sh "$pkg_name" "$version" "$base_template"
-		customize_sh "$pkg_name" "$version" "$arch" "$extrct" "$base_template"
+
+		#uninstall_sh "$pkg_name" "$isbndl" "$base_template"
+		#service_sh "$pkg_name" "$version" "$base_template"
+		dynmount_sh "$pkg_name" "$base_template"
+		customize_sh "$pkg_name" "$version" "$arch" "$extrct" "$base_template" "${args[module_prop_name]}"
 		module_prop \
 			"${args[module_prop_name]}" \
-			"${app_name} ${RV_BRAND}" \
+			"${app_name} ${RV_BRAND} - Dynamic Mount" \
 			"$version" \
-			"${app_name} ${RV_BRAND} Magisk module" \
+			"$(aapt dump badging $stock_apk | grep versionCode | sed -e "s/.*versionCode='//" -e "s/' .*//")" \
+			"${app_name} ${RV_BRAND} Magisk module by @CoolDroid" \
 			"https://raw.githubusercontent.com/${GITHUB_REPOSITORY:-}/update/${upj}" \
 			"$base_template"
 
@@ -435,6 +440,7 @@ join_args() {
 	echo "$1" | tr -d '\t\r' | tr ' ' '\n' | grep -v '^$' | sed "s/^/${2} /" | paste -sd " " - || :
 }
 
+dynmount_sh() { echo "${DYNMOUNT_SH//__PKGNAME/$1}" >"${2}/dynmount.sh"; }
 uninstall_sh() {
 	local s="${UNINSTALL_SH//__PKGNAME/$1}"
 	echo "${s//__ISBNDL/$2}" >"${3}/uninstall.sh"
@@ -448,6 +454,7 @@ customize_sh() {
 	elif [ "$3" = "arm-v7a" ]; then
 		s=$(sed 's/#arm64$/abort "ERROR: Wrong arch\nYour device: arm64\nModule: arm"/g' <<<"$s")
 	fi
+	s="${s//__MODULE_ID/$6}"
 	echo "${s//__PKGVER/$2}" >"${5}/customize.sh"
 }
 service_sh() {
@@ -458,9 +465,9 @@ module_prop() {
 	echo "id=${1}
 name=${2}
 version=v${3}
-versionCode=${NEXT_VER_CODE}
-author=j-hc
-description=${4}" >"${6}/module.prop"
+versionCode=${4}
+author=CoolDroid
+description=${5}" >"${7}/module.prop"
 
-	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
+	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${6}" >>"${7}/module.prop"; fi
 }
