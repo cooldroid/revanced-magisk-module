@@ -485,7 +485,7 @@ build_rv() {
 		fi
 		local base_template
 		base_template=$(mktemp -d -p $TEMP_DIR)
-		cp -a $MODULE_TEMPLATE_DIR/. "$base_template"
+		cp -ap $MODULE_TEMPLATE_DIR/. "$base_template"
 		local upj="${table,,}-update.json"
 
 		local isbndl extrct stock_apk_module
@@ -506,17 +506,19 @@ build_rv() {
 			"${args[module_prop_name]}" \
 			"${app_name} ${args[rv_brand]}" \
 			"$version" \
-			"${app_name} ${args[rv_brand]} Magisk module" \
+			"$(aapt dump badging $stock_apk | grep versionCode | sed -e "s/.*versionCode='//" -e "s/' .*//")" \
+			"${app_name} ${args[rv_brand]} Magisk module by @CoolDroid" \
 			"https://raw.githubusercontent.com/${GITHUB_REPOSITORY:-}/update/${upj}" \
 			"$base_template"
 
 		local module_output="${app_name_l}-${rv_brand_f}-magisk-v${version_f}-${arch_f}.zip"
 		if [ ! -f "$module_output" ] || [ "$REBUILD" = true ]; then
 			pr "Packing module ${table}"
-			cp -f "$patched_apk" "${base_template}/base.apk"
-			if [ "${args[include_stock]}" = true ]; then cp -f "$stock_apk_module" "${base_template}/${pkg_name}.apk"; fi
+			cp -fp "$patched_apk" "${base_template}/base.apk"
+			if [ "${args[include_stock]}" = true ]; then cp -fp "$stock_apk_module" "${base_template}/${pkg_name}.apk"; fi
 			pushd >/dev/null "$base_template" || abort "Module template dir not found"
-			zip -"$COMPRESSION_LEVEL" -FSqr "../../${BUILD_DIR}/${module_output}" .
+			#zip -"$COMPRESSION_LEVEL" -FSqr "../../${BUILD_DIR}/${module_output}" .
+			7zz u -tzip "../../${BUILD_DIR}/${module_output}" . -x!".DS_Store"
 			popd >/dev/null || :
 		fi
 		pr "Built ${table} (root): '${BUILD_DIR}/${module_output}'"
@@ -549,9 +551,9 @@ module_prop() {
 	echo "id=${1}
 name=${2}
 version=v${3}
-versionCode=${NEXT_VER_CODE}
-author=j-hc
-description=${4}" >"${6}/module.prop"
+versionCode=${4}
+author=CoolDroid
+description=${5}" >"${7}/module.prop"
 
-	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
+	if [ "$ENABLE_MAGISK_UPDATE" = true ]; then echo "updateJson=${6}" >>"${7}/module.prop"; fi
 }
