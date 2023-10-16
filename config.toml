@@ -1,5 +1,6 @@
-enable-magisk-update = true # set this to false if you do not want to receive updates for the module in magisk app
+enable-magisk-update = false # set this to false if you do not want to receive updates for the module in magisk app
 parallel-jobs = 1
+build-mindetach-module = false
 
 # add 'enabled = false' for not patching a specific app or remove it from the config
 # see https://github.com/j-hc/revanced-magisk-module/blob/main/CONFIG.md for more detailed explanations
@@ -7,6 +8,7 @@ parallel-jobs = 1
 # you can use rvmm-config-gen to generate a config
 
 [YouTube]
+enabled = false
 build-mode = "both"
 excluded-patches = ""
 included-patches = ""
@@ -16,6 +18,7 @@ uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
 
 [Music]
+enabled = false
 build-mode = "both"
 arch = "both"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
@@ -23,8 +26,9 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [GooglePhotos]
-build-mode = "both"
-arch = "both"
+enabled = false
+build-mode = "apk"
+arch = "arm64-v8a"
 version = "auto"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/photos/"
 uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
@@ -33,21 +37,26 @@ uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
 [Music-Extended]
 enabled = false
 app-name = "Music"
+module-prop-name = "music"
 patches-source = "inotia00/revanced-patches"
-cli-source = "inotia00/revanced-cli"
+excluded-patches = "'Custom branding name for YouTube Music' 'Custom branding icon for YouTube Music'"
 rv-brand = "ReVanced Extended"
-build-mode = "both"
-arch = "both"
+build-mode = "module"
+arch = "arm64-v8a"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [YouTube-Extended]
-enabled = false
 app-name = "YouTube"
+module-prop-name = "youtube"
 patches-source = "inotia00/revanced-patches"
-cli-source = "inotia00/revanced-cli"
+patches-version = "dev"
+excluded-patches = "'Custom branding name for YouTube' 'Custom branding icon for YouTube' 'Custom package name'"
 rv-brand = "ReVanced Extended"
-build-mode = "both"
+build-mode = "module"
+version = "20.05.40"
+# cli-source = "inotia00/revanced-cli"
+# uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
 
@@ -59,6 +68,7 @@ uptodown-dlurl = "https://twitch.en.uptodown.com/android"
 
 [Twitter]
 enabled = false
+patches-source = "crimera/piko"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter"
 build-mode = "apk"
 dpi = "120-640dpi"

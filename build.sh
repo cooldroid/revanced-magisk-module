@@ -47,9 +47,9 @@ java --version >/dev/null || abort "\`openjdk 17\` is not installed. install it 
 zip --version >/dev/null || abort "\`zip\` is not installed. install it with 'apt install zip' or equivalent"
 
 rm -rf revanced-magisk/bin/*/tmp.*
-if [ "$(echo "$TEMP_DIR"/*-rv/changelog.md)" ]; then
-	: >"$TEMP_DIR"/*-rv/changelog.md || :
-fi
+# if [ "$(echo "$TEMP_DIR"/*-rv/changelog.md)" ]; then
+# 	: >"$TEMP_DIR"/*-rv/changelog.md || :
+# fi
 
 mkdir -p ${MODULE_TEMPLATE_DIR}/bin/arm64 ${MODULE_TEMPLATE_DIR}/bin/arm ${MODULE_TEMPLATE_DIR}/bin/x86 ${MODULE_TEMPLATE_DIR}/bin/x64
 gh_dl "${MODULE_TEMPLATE_DIR}/bin/arm64/cmpr" "https://github.com/j-hc/cmpr/releases/latest/download/cmpr-arm64-v8a"
