@@ -9,9 +9,10 @@ NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
 REBUILD=${REBUILD:-false}
 OS=$(uname -o)
 
-SERVICE_SH=$(cat scripts/service.sh)
+#SERVICE_SH=$(cat scripts/service.sh)
+DYNMOUNT_SH=$(cat scripts/dynmount.sh)
 CUSTOMIZE_SH=$(cat scripts/customize.sh)
-UNINSTALL_SH=$(cat scripts/uninstall.sh)
+#UNINSTALL_SH=$(cat scripts/uninstall.sh)
 
 # -------------------- json/toml --------------------
 json_get() { grep -o "\"${1}\":[^\"]*\"[^\"]*\"" | sed -E 's/".*".*"(.*)"/\1/'; }
@@ -499,12 +500,14 @@ build_rv() {
 			stock_apk_module=$stock_apk
 		fi
 
-		uninstall_sh "$pkg_name" "$isbndl" "$base_template"
-		service_sh "$pkg_name" "$version" "$base_template"
-		customize_sh "$pkg_name" "$version" "$arch" "$extrct" "$base_template"
+
+		#uninstall_sh "$pkg_name" "$isbndl" "$base_template"
+		#service_sh "$pkg_name" "$version" "$base_template"
+		dynmount_sh "$pkg_name" "$base_template"
+		customize_sh "$pkg_name" "$version" "$arch" "$extrct" "$base_template" "${args[module_prop_name]}"
 		module_prop \
 			"${args[module_prop_name]}" \
-			"${app_name} ${args[rv_brand]}" \
+			"${app_name} ${args[rv_brand]} - Dynamic Mount" \
 			"$version" \
 			"$(aapt dump badging $stock_apk | grep versionCode | sed -e "s/.*versionCode='//" -e "s/' .*//")" \
 			"${app_name} ${args[rv_brand]} Magisk module by @CoolDroid" \
@@ -528,6 +531,7 @@ build_rv() {
 list_args() { tr -d '\t\r' <<<"$1" | tr -s ' ' | sed 's/" "/"\n"/g' | sed 's/\([^"]\)"\([^"]\)/\1'\''\2/g' | grep -v '^$' || :; }
 join_args() { list_args "$1" | sed "s/^/${2} /" | paste -sd " " - || :; }
 
+dynmount_sh() { echo "${DYNMOUNT_SH//__PKGNAME/$1}" >"${2}/dynmount.sh"; }
 uninstall_sh() {
 	local s="${UNINSTALL_SH//__PKGNAME/$1}"
 	echo "${s//__ISBNDL/$2}" >"${3}/uninstall.sh"
@@ -541,6 +545,7 @@ customize_sh() {
 	elif [ "$3" = "arm-v7a" ]; then
 		s=$(sed 's/#arm64$/abort "ERROR: Wrong arch\nYour device: arm64\nModule: arm"/g' <<<"$s")
 	fi
+	s="${s//__MODULE_ID/$6}"
 	echo "${s//__PKGVER/$2}" >"${5}/customize.sh"
 }
 service_sh() {

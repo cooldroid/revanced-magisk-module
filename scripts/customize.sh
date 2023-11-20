@@ -1,6 +1,16 @@
 # shellcheck disable=SC2148,SC2086
 ui_print ""
 
+if [ "$BOOTMODE" != "true" ]; then
+    abort "! Recovery install is not supported"
+fi
+
+if [[ ! -d "$NVBASE/modules/magisk_proc_monitor" || ! -d "$NVBASE/modules_update/magisk_proc_monitor" ]]; then
+    ui_print "! Please install Magisk Process monitor tool v1.1+"
+    ui_print "  https://github.com/HuskyDG/magisk_proc_monitor"
+    abort
+fi
+
 if [ $ARCH = "arm" ]; then
 	#arm
 	ARCH_LIB=armeabi-v7a
@@ -13,14 +23,6 @@ else
 	abort "ERROR: unsupported arch: ${ARCH}"
 fi
 set_perm_recursive $MODPATH/bin 0 0 0755 0777
-
-nsenter -t1 -m -- grep __PKGNAME /proc/mounts | while read -r line; do
-	ui_print "* Un-mount"
-	mp=${line#* }
-	mp=${mp%% *}
-	nsenter -t1 -m -- umount -l "${mp%%\\*}"
-done
-am force-stop __PKGNAME
 
 INS=true
 if BASEPATH=$(pm path __PKGNAME); then
@@ -92,25 +94,14 @@ fi
 ui_print "* Setting Permissions"
 set_perm $MODPATH/base.apk 1000 1000 644 u:object_r:apk_data_file:s0
 
-ui_print "* Mounting __PKGNAME"
-mkdir -p $NVBASE/rvhc
-RVPATH=$NVBASE/rvhc/${MODPATH##*/}.apk
-mv -f $MODPATH/base.apk $RVPATH
-
-if ! op=$(nsenter -t1 -m -- mount -o bind $RVPATH $BASEPATH/base.apk 2>&1); then
-	ui_print "ERROR: Mount failed!"
-	ui_print "$op"
-fi
+ui_print "* Updating live version"
 am force-stop __PKGNAME
-ui_print "* Optimizing __PKGNAME"
-nohup cmd package compile --reset __PKGNAME >/dev/null 2>&1 &
+mkdir -p $NVBASE/rvhc
+mv -f $MODPATH/base.apk $NVBASE/rvhc/${MODPATH##*/}.apk
+cat $MODPATH/dynmount.sh > $NVBASE/modules/__MODULE_ID/dynmount.sh
 
 ui_print "* Cleanup"
 rm -rf $MODPATH/bin $MODPATH/__PKGNAME.apk
-
-for s in "uninstall.sh" "service.sh"; do
-	sed -i "2 i\NVBASE=${NVBASE}" $MODPATH/$s
-done
 
 ui_print "* Done"
 ui_print "  by CoolDroid (github.com/cooldroid)"
