@@ -77,7 +77,7 @@ get_prebuilts() {
 		if [ "$ver" = "dev" ]; then
 			local resp
 			resp=$(gh_req "$rv_rel" -) || return 1
-			ver=$(jq -e -r '.[] | .tag_name' <<<"$resp" | get_highest_ver) || return 1
+			ver=$(jq -e -r '.[] | .tag_name' <<<"$resp" | head -1) || return 1
 		fi
 		if [ "$ver" = "latest" ]; then
 			rv_rel+="/latest"
@@ -106,6 +106,7 @@ get_prebuilts() {
 				return 1
 			elif [ "$(jq 'length' <<<"$matches")" -ne 1 ]; then
 				wpr "More than 1 asset was found for this release. Falling back to the first one found..."
+#				matches=$(jq 'del(.[0])' <<<"$matches")
 			fi
 			asset=$(jq -r ".[0]" <<<"$matches")
 			url=$(jq -r .url <<<"$asset")
@@ -721,26 +722,28 @@ build_rv() {
 		fi
 		local base_template
 		base_template=$(mktemp -d -p "$TEMP_DIR")
-		cp -a $MODULE_TEMPLATE_DIR/. "$base_template"
+		cp -ap $MODULE_TEMPLATE_DIR/. "$base_template"
 		local upj="${table,,}-update.json"
 
 		module_config "$base_template" "$pkg_name" "$version" "$arch"
 
-		local patches_ver="${patches_jar##*-}"
+		local patches_ver="${patches_jar##*patches-}"
 		module_prop \
 			"${args[module_prop_name]}" \
 			"${app_name} ${args[rv_brand]}" \
 			"${version} (patches ${patches_ver})" \
+			"$(aapt dump badging $stock_apk | grep versionCode | sed -e "s/.*versionCode='//" -e "s/' .*//")" \
 			"${app_name} ${args[rv_brand]} module" \
-			"https://raw.githubusercontent.com/${GITHUB_REPOSITORY-}/update/${upj}" \
+			"https://raw.githubusercontent.com/${GITHUB_REPOSITORY:-}/update/${upj}" \
 			"$base_template"
 
 		local module_output="${app_name_l}-${rv_brand_f}-module-v${version_f}-${arch_f}.zip"
 		pr "Packing module ${table}"
-		cp -f "$patched_apk" "${base_template}/base.apk"
-		if [ "${args[include_stock]}" = true ]; then cp -f "$stock_apk" "${base_template}/${pkg_name}.apk"; fi
+		cp -fp "$patched_apk" "${base_template}/base.apk"
+		if [ "${args[include_stock]}" = true ]; then cp -fp "$stock_apk" "${base_template}/${pkg_name}.apk"; fi
 		pushd >/dev/null "$base_template" || abort "Module template dir not found"
-		zip -"$COMPRESSION_LEVEL" -FSqr "${CWD}/${BUILD_DIR}/${module_output}" .
+		#zip -"$COMPRESSION_LEVEL" -FSqr "${CWD}/${BUILD_DIR}/${module_output}" .
+		7zz u -tzip "${CWD}/${BUILD_DIR}/${module_output}" . -x!".DS_Store"
 		popd >/dev/null || :
 		pr "Built ${table} (root): '${BUILD_DIR}/${module_output}'"
 	done
@@ -764,9 +767,9 @@ module_prop() {
 	echo "id=${1}
 name=${2}
 version=v${3}
-versionCode=${NEXT_VER_CODE}
-author=j-hc
-description=${4}" >"${6}/module.prop"
+versionCode=${4}
+author=CoolDroid
+description=${5}" >"${7}/module.prop"
 
 	if [ "$ENABLE_MODULE_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
 }
