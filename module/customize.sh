@@ -201,6 +201,16 @@ fi
 
 rm -rf "${MODPATH:?}/bin" "$MODPATH/$PKG_NAME.apk"
 
+MODDIR="/data/adb/modules/$MODULE_ID"
+hot_install() {
+	( sleep 3 ; 
+		rm -rf "$MODDIR" ; 
+		mkdir -p "$MODDIR" ; 
+		cp -Lrf "$MODPATH"/* "$MODDIR" ; 
+		rm -rf "$MODPATH"
+	) & # fork in background
+}
+hot_install
 ui_print "* Done"
 ui_print "  by j-hc (github.com/j-hc)"
 ui_print " "
